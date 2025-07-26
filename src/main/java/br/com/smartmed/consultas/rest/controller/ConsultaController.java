@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import br.com.smartmed.consultas.rest.dto.AgendamentoInteligenteRequestDTO;
+
 import java.util.List;
 
 @RestController
@@ -47,5 +49,10 @@ public class ConsultaController {
         consultaService.deletar(consultaExistente);
     }
 
+    @PostMapping("/agendar-automatico")
+    public ResponseEntity<ConsultaDTO> agendarAutomatico(@Valid @RequestBody AgendamentoInteligenteRequestDTO request) {
+        ConsultaDTO consultaAgendada = consultaService.agendarAutomaticamente(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(consultaAgendada);
+    }
 
 }
