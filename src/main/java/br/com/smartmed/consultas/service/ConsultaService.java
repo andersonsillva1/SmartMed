@@ -6,18 +6,16 @@ import br.com.smartmed.consultas.repository.ConsultaRepository;
 import br.com.smartmed.consultas.repository.ConvenioRepository;
 import br.com.smartmed.consultas.repository.FormaPagamentoRepository;
 import br.com.smartmed.consultas.repository.MedicoRepository;
-import br.com.smartmed.consultas.rest.dto.AgendamentoInteligenteRequestDTO;
+import br.com.smartmed.consultas.rest.dto.*;
 import br.com.smartmed.consultas.model.MedicoModel;
 import br.com.smartmed.consultas.model.PacienteModel;
 import br.com.smartmed.consultas.model.ConvenioModel;
 import br.com.smartmed.consultas.repository.PacienteRepository;
-import br.com.smartmed.consultas.rest.dto.ConsultaDTO;
-import br.com.smartmed.consultas.rest.dto.FaturamentoRelatorioDTO;
-import br.com.smartmed.consultas.rest.dto.FaturamentoPorItemDTO;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -264,5 +262,39 @@ public class ConsultaService {
         consultaRepository.save(novaConsulta);
 
         return modelMapper.map(novaConsulta, ConsultaDTO.class);
+    }
+
+    public List<HistoricoConsultaResponseDTO> obterHistoricoConsultas(HistoricoConsultaRequestDTO request){
+        PacienteModel paciente = pacienteRepository.findById(request.getPacienteID())
+                .orElseThrow(()-> new ObjectNotFoundException("Paciente com ID " + request.getPacienteID() + " não encontrado. "));
+
+        if (!paciente.getAtivo()){
+            throw new BusinessRuleException("Paciente com ID " + request.getPacienteID() + " está inativo. Histórico não pode ser consultado.");
+
+        }
+
+        LocalDateTime dataInicio = null;
+        if (request.getDataInicio() != null){
+            dataInicio= request.getDataInicio().atStartOfDay();
+        }
+        LocalDateTime dataFim = null;
+        if (request.getDataFim() != null){
+            dataFim = request.getDataFim().atTime(LocalTime.MAX);
+
+        }
+        if (dataInicio != null && dataFim != null && dataInicio.isAfter(dataFim)) {
+            throw new BusinessRuleException("A data inicial não pode ser posterior à data final no filtro");
+        }
+
+        List<HistoricoConsultaResponseDTO> historico = consultaRepository.findHistoricoConsultas(
+                request.getPacienteID(),
+                dataInicio,
+                dataFim,
+                request.getMedicoID(),
+                request.getStatus(),
+                request.getEspecialidadeID()
+        );
+        return historico;
+
     }
 }

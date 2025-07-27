@@ -46,6 +46,8 @@ public class PacienteModel {
     @Email(message = "E-mail inválido.")
     private String email;
 
+    private Boolean ativo;
+
     //Comentei esse método, pois o mesmo estava causando memory leak.
     /*
     public PacienteDTO toDTO(){

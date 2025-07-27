@@ -2,6 +2,7 @@ package br.com.smartmed.consultas.repository;
 
 import br.com.smartmed.consultas.model.ConsultaModel;
 import br.com.smartmed.consultas.rest.dto.FaturamentoPorItemDTO;
+import br.com.smartmed.consultas.rest.dto.HistoricoConsultaResponseDTO;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -48,6 +49,26 @@ public interface ConsultaRepository extends JpaRepository<ConsultaModel, Integer
             @Param("medicoId") Integer medicoId,
             @Param("inicioPeriodo") LocalDateTime inicioPeriodo,
             @Param("fimPeriodo") LocalDateTime fimPeriodo);
+
+    @Query("SELECT NEW br.com.smartmed.consultas.rest.dto.HistoricoConsultaResponseDTO(" +
+            "c.dataHoraConsulta, m.nome, e.nome, c.valor, c.status, c.observacoes) " +
+            "FROM ConsultaModel c " +
+            "JOIN MedicoModel m ON c.medicoID = m.id " +
+            "JOIN EspecialidadeModel e ON m.especialidadeID = e.id " +
+            "WHERE c.pacienteID = :pacienteID " +
+            "AND (:dataInicio IS NULL OR c.dataHoraConsulta >= :dataInicio) " +
+            "AND (:dataFim IS NULL OR c.dataHoraConsulta <= :dataFim) " +
+            "AND (:medicoID IS NULL OR c.medicoID = :medicoID) " +
+            "AND (:status IS NULL OR c.status = :status) " +
+            "AND (:especialidadeID IS NULL OR m.especialidadeID = :especialidadeID) " +
+            "ORDER BY c.dataHoraConsulta DESC")
+    List<HistoricoConsultaResponseDTO> findHistoricoConsultas(
+            @Param("pacienteId") Integer pacienteId,
+            @Param("dataInicio") LocalDateTime dataInicio,
+            @Param("dataFim") LocalDateTime dataFim,
+            @Param("medicoId") Integer medicoId,
+            @Param("status") String status,
+            @Param("especialidadeId") Integer especialidadeId);
 
 }
 
