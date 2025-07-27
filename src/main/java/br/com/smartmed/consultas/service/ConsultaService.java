@@ -264,6 +264,7 @@ public class ConsultaService {
         return modelMapper.map(novaConsulta, ConsultaDTO.class);
     }
 
+    @Transactional(readOnly = true)
     public List<HistoricoConsultaResponseDTO> obterHistoricoConsultas(HistoricoConsultaRequestDTO request){
         PacienteModel paciente = pacienteRepository.findById(request.getPacienteID())
                 .orElseThrow(()-> new ObjectNotFoundException("Paciente com ID " + request.getPacienteID() + " não encontrado. "));

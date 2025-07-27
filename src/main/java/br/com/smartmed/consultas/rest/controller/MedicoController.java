@@ -3,6 +3,8 @@
 package br.com.smartmed.consultas.rest.controller;
 
 import br.com.smartmed.consultas.model.MedicoModel;
+import br.com.smartmed.consultas.rest.dto.AgendaMedicoRequestDTO;
+import br.com.smartmed.consultas.rest.dto.AgendaMedicoResponseDTO;
 import br.com.smartmed.consultas.rest.dto.MedicoDTO;
 import br.com.smartmed.consultas.service.MedicoService;
 import jakarta.validation.Valid;
@@ -47,5 +49,19 @@ public class MedicoController {
     @DeleteMapping
     public void deletar(@Valid @RequestBody MedicoModel medicoExistente) {
         medicoService.deletar(medicoExistente);
+    }
+
+    /**
+     * Gerencia a agenda de um médico, retornando os horários disponíveis e ocupados em uma determinada data.
+     * Link: http://localhost:8080/api/medicos/agenda
+     *
+     * @param request DTO de requisição com ID do médico e a data.
+     * @return AgendaMedicoResponseDTO com o nome do médico, data e listas de horários ocupados/disponíveis.
+     */
+    @PostMapping("/agenda")
+    public ResponseEntity<AgendaMedicoResponseDTO> gerenciarAgenda(
+            @Valid @RequestBody AgendaMedicoRequestDTO request) {
+        AgendaMedicoResponseDTO agenda = medicoService.gerenciarAgenda(request);
+        return ResponseEntity.status(HttpStatus.OK).body(agenda);
     }
 }
