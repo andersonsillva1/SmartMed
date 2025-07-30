@@ -125,24 +125,20 @@ public class MedicoService {
             throw new BusinessRuleException("Médico com ID " + request.getMedicoID() + " está inativo. Agenda não pode ser consultada.");
             
         }
-        // 2. Definir o período de busca (início e fim do dia)
         LocalDateTime inicioDoDia = request.getData().atStartOfDay();
         LocalDateTime fimDoDia = request.getData().atTime(LocalTime.MAX);
 
-        // 3. Buscar todas as consultas do médico para a data
         List<ConsultaModel> consultasDoDia = consultaRepository.findByMedicoIDAndDataHoraConsultaBetween(
                 request.getMedicoID(), inicioDoDia, fimDoDia);
 
-        // 4. Calcular horários ocupados
         Set<String> horariosOcupadosSet = new HashSet<>();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
-        int duracaoPadraoConsultaMinutos = 30; // Regra de Negócio: duração padrão de 30 minutos
+        int duracaoPadraoConsultaMinutos = 30;
 
         for (ConsultaModel consulta : consultasDoDia) {
             LocalDateTime inicioConsulta = consulta.getDataHoraConsulta();
             LocalDateTime fimConsulta = inicioConsulta.plusMinutes(duracaoPadraoConsultaMinutos); // Assumindo duração fixa
 
-            // Adiciona todos os slots de 30 minutos que a consulta ocupa
             LocalDateTime currentSlot = inicioConsulta;
             while (currentSlot.isBefore(fimConsulta)) {
                 horariosOcupadosSet.add(currentSlot.format(formatter));
@@ -153,10 +149,9 @@ public class MedicoService {
         List<String> horariosOcupados = new ArrayList<>(horariosOcupadosSet);
         Collections.sort(horariosOcupados); // Ordena os horários ocupados
 
-        // 5. Gerar todos os slots de horário possíveis para o dia (ex: 08:00 às 18:00)
         List<String> todosOsSlotsPossiveis = new ArrayList<>();
         LocalTime horarioInicioExpediente = LocalTime.of(8, 0);
-        LocalTime horarioFimExpediente = LocalTime.of(18, 0); // 18:00 não incluso, pois a consulta termina ANTES
+        LocalTime horarioFimExpediente = LocalTime.of(18, 0);
 
         LocalTime slotAtual = horarioInicioExpediente;
         while (slotAtual.isBefore(horarioFimExpediente)) {
@@ -164,16 +159,13 @@ public class MedicoService {
             slotAtual = slotAtual.plusMinutes(duracaoPadraoConsultaMinutos);
         }
 
-        // 6. Calcular horários disponíveis
         List<String> horariosDisponiveis = new ArrayList<>();
-        LocalDateTime agora = LocalDateTime.now(); // Momento atual para filtrar horários passados
+        LocalDateTime agora = LocalDateTime.now();
 
         for (String slot : todosOsSlotsPossiveis) {
             LocalTime tempoDoSlot = LocalTime.parse(slot, formatter);
             LocalDateTime dataHoraSlot = request.getData().atTime(tempoDoSlot);
 
-            // Regra de Negócio: Não retornar horários anteriores ao momento atual
-            // Se a data da agenda é hoje, e o slot já passou, ignore.
             if (request.getData().isEqual(agora.toLocalDate()) && dataHoraSlot.isBefore(agora)) {
                 continue;
             }
