@@ -2,7 +2,10 @@
 package br.com.smartmed.consultas.rest.controller;
 
 import br.com.smartmed.consultas.model.EspecialidadeModel;
+import br.com.smartmed.consultas.rest.dto.EspecialidadeAtendimentosDTO;
 import br.com.smartmed.consultas.rest.dto.EspecialidadeDTO;
+import br.com.smartmed.consultas.rest.dto.RelatorioEspecialidadesRequestDTO;
+import br.com.smartmed.consultas.service.ConsultaService;
 import br.com.smartmed.consultas.service.EspecialidadeService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +21,9 @@ public class EspecialidadeController {
 
     @Autowired
     private EspecialidadeService especialidadeService;
+
+    @Autowired
+    private ConsultaService consultaService;
 
     @GetMapping("/{id}")
     public ResponseEntity<EspecialidadeDTO> obterPorId(@PathVariable int id) {
@@ -46,5 +52,11 @@ public class EspecialidadeController {
     @DeleteMapping
     public void deletar(@Valid @RequestBody EspecialidadeModel especialidadeExistente) {
         especialidadeService.deletar(especialidadeExistente);
+    }
+
+    @PostMapping("/especialidades-frequentes")
+    public ResponseEntity<List<EspecialidadeAtendimentosDTO>> gerarRelatorioEspecialidades(@Valid @RequestBody RelatorioEspecialidadesRequestDTO request){
+        List<EspecialidadeAtendimentosDTO> relatorio = consultaService.gerarRelatoriosEspecialidades(request);
+        return ResponseEntity.status(HttpStatus.OK).body(relatorio);
     }
 }

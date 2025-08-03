@@ -1,6 +1,7 @@
 package br.com.smartmed.consultas.repository;
 
 import br.com.smartmed.consultas.model.ConsultaModel;
+import br.com.smartmed.consultas.rest.dto.EspecialidadeAtendimentosDTO;
 import br.com.smartmed.consultas.rest.dto.FaturamentoPorItemDTO;
 import br.com.smartmed.consultas.rest.dto.HistoricoConsultaResponseDTO;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -72,6 +73,17 @@ public interface ConsultaRepository extends JpaRepository<ConsultaModel, Integer
             @Param("especialidadeId") Integer especialidadeId);
 
     List<ConsultaModel> findByMedicoIDAndDataHoraConsultaBetween(Integer medicoId, LocalDateTime inicioDoDia, LocalDateTime fimDoDia);
+
+    @Query("SELECT NEW br.com.smartmed.consultas.rest.dto.EspecialidadeAtendimentosDTO(e.nome, COUNT(c.id)) " +
+    "FROM ConsultaModel c " +
+    "JOIN MedicoModel m ON c.medicoID = m.id " +
+    "JOIN EspecialidadeModel e ON  m.especialidadeID = e.id " +
+    "WHERE c.status = 'REALIZADA' AND c.dataHoraConsulta BETWEEN :dataInicio AND :dataFim " +
+    "GROUP BY e.nome " +
+    "ORDER BY COUNT(c.id) DESC")
+    List<EspecialidadeAtendimentosDTO> findEspecialidadesMaisAtendidas(
+            @Param("dataInicio") LocalDateTime dataInicio,
+            @Param("dataFim") LocalDateTime dataFim);
 
 }
 

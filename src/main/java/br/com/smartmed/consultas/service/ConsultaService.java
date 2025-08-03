@@ -316,4 +316,16 @@ public class ConsultaService {
 
         return new CancelamentoResponseDTO("Consulta cancelado com sucesso", consulta.getStatus());
     }
+
+    @Transactional(readOnly = true)
+    public List<EspecialidadeAtendimentosDTO> gerarRelatoriosEspecialidades(RelatorioEspecialidadesRequestDTO request){
+        if  (request.getDataInicio().isAfter(request.getDataFim())){
+            throw new BusinessRuleException("A data inicia não pode ser posterior á data final.");
+        }
+        LocalDateTime inicioDoDia = request.getDataInicio().atStartOfDay();
+        LocalDateTime fimDoDia = request.getDataFim().atTime(LocalTime.MAX);
+
+        return consultaRepository.findEspecialidadesMaisAtendidas(inicioDoDia, fimDoDia);
+
+    }
 }
