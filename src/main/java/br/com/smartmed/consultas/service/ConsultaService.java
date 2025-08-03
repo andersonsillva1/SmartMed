@@ -296,6 +296,24 @@ public class ConsultaService {
                 request.getEspecialidadeID()
         );
         return historico;
+    }
 
+    @Transactional
+    public CancelamentoResponseDTO cancelarConsulta(CancelamentoRequestDTO request){
+        ConsultaModel consulta = consultaRepository.findById(request.getConsultaID()).orElseThrow(()->new ObjectNotFoundException("Consulta com ID " + request.getConsultaID() + " não encontrada."));
+        if (!consulta.getStatus().equalsIgnoreCase("AGENDADA")){
+            throw new BusinessRuleException("A consulta com ID " + consulta.getId() + " não pode ser cancelada, pois o status atual é '" + consulta.getStatus() + "'." );
+        }
+        if (consulta.getDataHoraConsulta().isBefore(LocalDateTime.now())){
+            throw new BusinessRuleException("Não é possivel cancelar uma consulta que já ocorreu.");
+        }
+        consulta.setStatus("CANCELADA");
+
+        String observacoesAtuais = consulta.getObservacoes() != null ? consulta.getObservacoes() : "";
+        consulta.setObservacoes(observacoesAtuais + "\n[CANCELADA] motivo: " + request.getMotivo());
+
+        consultaRepository.save(consulta);
+
+        return new CancelamentoResponseDTO("Consulta cancelado com sucesso", consulta.getStatus());
     }
 }

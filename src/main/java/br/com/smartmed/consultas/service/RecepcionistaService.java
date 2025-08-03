@@ -3,9 +3,14 @@ package br.com.smartmed.consultas.service;
 import br.com.smartmed.consultas.exception.*;
 import br.com.smartmed.consultas.model.RecepcionistaModel;
 import br.com.smartmed.consultas.repository.RecepcionistaRepository;
+import br.com.smartmed.consultas.rest.dto.FiltrarRecepcionistaRequestDTO;
+import br.com.smartmed.consultas.rest.dto.PageResponseDTO;
 import br.com.smartmed.consultas.rest.dto.RecepcionistaDTO;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -116,4 +121,32 @@ public class RecepcionistaService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public PageResponseDTO<RecepcionistaDTO> filtrarRecepcionistas(FiltrarRecepcionistaRequestDTO request){
+        if (request.getDataInicio() != null && request.getDataFim() != null && request.getDataInicio().isAfter(request.getDataFim())){
+            throw new BusinessRuleException("A data inicial não pode ser posterior à data final no filtro de data de admissão.");
+        }
+
+        Boolean statusAtivo = null;
+        if (request.getStatus() != null){
+            if (request.getStatus().equalsIgnoreCase("ATIVO")){
+                statusAtivo = true;
+            } else if (request.getStatus().equalsIgnoreCase("INATIVO")){
+                statusAtivo = false;
+            }
+        }
+
+        Pageable pageable = PageRequest.of(request.getPagina(), request.getTamanhoPagina());
+
+        Page<RecepcionistaModel> paginaDeRecepcionistas = recepcionistaRepository.findRecepcionistasWithFilters(
+                statusAtivo,
+                request.getDataInicio(),
+                request.getDataFim(),
+                pageable
+        );
+
+        List<RecepcionistaDTO> conteudo = paginaDeRecepcionistas.getContent().stream().map(recepcionista -> modelMapper.map(recepcionista, RecepcionistaDTO.class)).collect(Collectors.toList());
+
+        return new PageResponseDTO<>(conteudo,paginaDeRecepcionistas.getTotalPages(), paginaDeRecepcionistas.getTotalElements(), paginaDeRecepcionistas.getNumber(), paginaDeRecepcionistas.getSize());
+    }
 }

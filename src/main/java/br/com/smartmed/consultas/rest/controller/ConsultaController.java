@@ -1,6 +1,8 @@
 package br.com.smartmed.consultas.rest.controller;
 
 import br.com.smartmed.consultas.model.ConsultaModel;
+import br.com.smartmed.consultas.rest.dto.CancelamentoRequestDTO;
+import br.com.smartmed.consultas.rest.dto.CancelamentoResponseDTO;
 import br.com.smartmed.consultas.rest.dto.ConsultaDTO;
 import br.com.smartmed.consultas.service.ConsultaService;
 import jakarta.validation.Valid;
@@ -53,6 +55,12 @@ public class ConsultaController {
     public ResponseEntity<ConsultaDTO> agendarAutomatico(@Valid @RequestBody AgendamentoInteligenteRequestDTO request) {
         ConsultaDTO consultaAgendada = consultaService.agendarAutomaticamente(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(consultaAgendada);
+    }
+
+    @PutMapping("/cancelar")
+    public ResponseEntity<CancelamentoResponseDTO> cancelarConsulta(@Valid @RequestBody CancelamentoRequestDTO request) {
+        CancelamentoResponseDTO resposta = consultaService.cancelarConsulta(request);
+        return ResponseEntity.status(HttpStatus.OK).body(resposta);
     }
 
 }
