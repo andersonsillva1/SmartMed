@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -328,4 +329,50 @@ public class ConsultaService {
         return consultaRepository.findEspecialidadesMaisAtendidas(inicioDoDia, fimDoDia);
 
     }
+
+    @Transactional
+    public ReagendamentoResponseDTO reagendarConsulta(ReagendamentoRequestDTO request){
+        ConsultaModel consulta = consultaRepository.findById(request.getConsultaID()).orElseThrow(()-> new ObjectNotFoundException("Consulta com ID " + request.getConsultaID() + " não encontrada."));
+        if (!consulta.getStatus().equalsIgnoreCase("AGENDADA")){
+            throw new BusinessRuleException("A consulta com ID " + consulta.getId() + " não pode ser reagendada, pois o status é '" + consulta.getStatus() + "'.");
+        }
+        if ((request.getNovaDataHora().isBefore(LocalDateTime.now()))){
+            throw new BusinessRuleException(("Só é possivel reagendar para uma data futura."));
+        }
+
+        int duracaoPadraoConsultaMinutos = 30;
+        LocalDateTime inicioNovaConsulta = request.getNovaDataHora();
+        LocalDateTime fimNovaConsulta = inicioNovaConsulta.plusMinutes(duracaoPadraoConsultaMinutos);
+
+        List<ConsultaModel> consultasConflitantes = consultaRepository.findConsultasByMedicoAndPeriodo(
+                consulta.getMedicoID(),
+                inicioNovaConsulta,
+                fimNovaConsulta
+        );
+
+        // Se a lista de conflitos não estiver vazia, verifique se a única consulta é a própria
+        if (!consultasConflitantes.isEmpty()) {
+            boolean isConflito = false;
+            for (ConsultaModel c : consultasConflitantes) {
+                // Se o ID da consulta conflitante for diferente do ID da consulta que estamos reagendando, é um conflito real.
+                if (c.getId() != consulta.getId()) {
+                    isConflito = true;
+                    break;
+                }
+            }
+            if (isConflito) {
+                throw new BusinessRuleException("Horário indisponível. Já existe outra consulta agendada para o médico neste período.");
+            }
+        }
+
+
+        consulta.setDataHoraConsulta(request.getNovaDataHora());
+        String observacoesAtuais = consulta.getObservacoes() != null ? consulta.getObservacoes() : "";
+        consulta.setObservacoes(observacoesAtuais + "\n[Reagendada] Motivo: " + request.getMotivo() + " (Data original: " + inicioNovaConsulta.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) + ")");
+
+        consultaRepository.save(consulta);
+        return new ReagendamentoResponseDTO("Consulta reagendada com sucesso", consulta.getDataHoraConsulta());
+
+    }
+
 }

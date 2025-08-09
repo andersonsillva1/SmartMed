@@ -39,7 +39,7 @@ public class RecepcionistaModel {
     @Column(name = "dataAdmissao", nullable = false)
     private LocalDate dataAdmissao;
 
-    @Column(name = "dataDemissao", nullable = false)
+    @Column(name = "dataDemissao", nullable = true)
     private LocalDate dataDemissao;
 
     @Column(name = "telefone", length = 11, nullable = false)
