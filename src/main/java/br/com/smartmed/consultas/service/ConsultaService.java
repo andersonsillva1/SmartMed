@@ -1,16 +1,9 @@
 package br.com.smartmed.consultas.service;
 
 import br.com.smartmed.consultas.exception.*;
-import br.com.smartmed.consultas.model.ConsultaModel;
-import br.com.smartmed.consultas.repository.ConsultaRepository;
-import br.com.smartmed.consultas.repository.ConvenioRepository;
-import br.com.smartmed.consultas.repository.FormaPagamentoRepository;
-import br.com.smartmed.consultas.repository.MedicoRepository;
+import br.com.smartmed.consultas.model.*;
+import br.com.smartmed.consultas.repository.*;
 import br.com.smartmed.consultas.rest.dto.*;
-import br.com.smartmed.consultas.model.MedicoModel;
-import br.com.smartmed.consultas.model.PacienteModel;
-import br.com.smartmed.consultas.model.ConvenioModel;
-import br.com.smartmed.consultas.repository.PacienteRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -43,6 +36,8 @@ public class ConsultaService {
     private FormaPagamentoRepository formaPagamentoRepository;
     @Autowired
     private ConvenioRepository convenioRepository;
+    @Autowired
+    private RecepcionistaRepository recepcionistaRepository;
 
     @Transactional(readOnly = true)
     public ConsultaDTO obterPorId(int id){
@@ -417,5 +412,77 @@ public class ConsultaService {
                 rankingPage.getNumber(),
                 rankingPage.getSize()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public void validarAcessoRecepcionista(Integer recepcionistaId) {
+        recepcionistaRepository.findByIdAndAtivoTrue(recepcionistaId)
+                .orElseThrow(() -> new BusinessRuleException("Recepcionista com ID " + recepcionistaId + " não pode cadastrar consultas. Verifique se o recepcionista existe e está ativo."));
+    }
+
+    @Transactional
+    public CadastroConsultaResponseDTO cadastrarConsulta(CadastroConsultaRequestDTO request) {
+        // 1. Validar o acesso do recepcionista (se está ativo)
+        RecepcionistaModel recepcionista = recepcionistaRepository.findByIdAndAtivoTrue(request.getRecepcionistaID())
+                .orElseThrow(() -> new BusinessRuleException("Recepcionista com ID " + request.getRecepcionistaID() + " não pode cadastrar consultas. Verifique se o recepcionista existe e está ativo."));
+
+        // 2. Validar se a data e hora da consulta são futuras
+        if (request.getDataHora().isBefore(LocalDateTime.now())) {
+            throw new BusinessRuleException("Não é possível agendar uma consulta para uma data e hora que já passaram.");
+        }
+
+        // 3. Validar se os IDs de paciente e médico existem
+        pacienteRepository.findById(request.getPacienteID())
+                .orElseThrow(() -> new ObjectNotFoundException("Paciente com ID " + request.getPacienteID() + " não encontrado."));
+        medicoRepository.findById(request.getMedicoID())
+                .orElseThrow(() -> new ObjectNotFoundException("Médico com ID " + request.getMedicoID() + " não encontrado."));
+        formaPagamentoRepository.findById(request.getFormaPagamentoID())
+                .orElseThrow(() -> new ObjectNotFoundException("Forma de Pagamento com ID " + request.getFormaPagamentoID() + " não encontrada."));
+
+        // Se o convênio for informado, validar a existência
+        if (request.getConvenioID() != null) {
+            convenioRepository.findById(request.getConvenioID())
+                    .orElseThrow(() -> new ObjectNotFoundException("Convênio com ID " + request.getConvenioID() + " não encontrado."));
+        }
+
+        // 4. Lógica de verificação de conflito de horário
+        LocalDateTime inicioNovaConsulta = request.getDataHora();
+        LocalDateTime fimNovaConsulta = inicioNovaConsulta.plusMinutes(request.getDuracaoMinutos());
+
+        List<ConsultaModel> consultasConflitantes = consultaRepository.findConsultasByMedicoAndPeriodo(
+                request.getMedicoID(),
+                inicioNovaConsulta,
+                fimNovaConsulta
+        );
+
+        if (!consultasConflitantes.isEmpty()) {
+            throw new BusinessRuleException("Horário indisponível. Já existe outra consulta agendada para o médico neste período.");
+        }
+
+        // 5. Criar o objeto ConsultaModel a partir do DTO
+        ConsultaModel novaConsulta = new ConsultaModel();
+        novaConsulta.setDataHoraConsulta(request.getDataHora());
+        novaConsulta.setStatus("AGENDADA");
+        // O valor deve ser definido pelo serviço, não pelo DTO.
+        // Assumindo que o valor é o de referência do médico ou ajustado pelo convênio.
+        MedicoModel medico = medicoRepository.findById(request.getMedicoID()).get();
+        double valorConsulta = medico.getValorConsultaReferencia();
+        if (request.getConvenioID() != null && request.getConvenioID() > 0) {
+            valorConsulta *= 0.5; // 50% do valor de referência
+        }
+        novaConsulta.setValor(valorConsulta);
+
+        novaConsulta.setObservacoes("Consulta agendada manualmente por " + recepcionista.getNome());
+        novaConsulta.setPacienteID(request.getPacienteID());
+        novaConsulta.setMedicoID(request.getMedicoID());
+        novaConsulta.setFormaPagamentoID(request.getFormaPagamentoID());
+        novaConsulta.setConvenioID(request.getConvenioID() != null ? request.getConvenioID() : 0);
+        novaConsulta.setRecepcionistaID(request.getRecepcionistaID());
+
+        // 6. Salvar a nova consulta
+        consultaRepository.save(novaConsulta);
+
+        // 7. Retornar a resposta de sucesso
+        return new CadastroConsultaResponseDTO("Consulta agendada com sucesso", novaConsulta.getStatus());
     }
 }

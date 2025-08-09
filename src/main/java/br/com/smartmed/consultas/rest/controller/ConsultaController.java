@@ -1,17 +1,13 @@
 package br.com.smartmed.consultas.rest.controller;
 
 import br.com.smartmed.consultas.model.ConsultaModel;
-import br.com.smartmed.consultas.rest.dto.CancelamentoRequestDTO;
-import br.com.smartmed.consultas.rest.dto.CancelamentoResponseDTO;
-import br.com.smartmed.consultas.rest.dto.ConsultaDTO;
+import br.com.smartmed.consultas.rest.dto.*;
 import br.com.smartmed.consultas.service.ConsultaService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import br.com.smartmed.consultas.rest.dto.AgendamentoInteligenteRequestDTO;
 
 import java.util.List;
 
@@ -61,6 +57,13 @@ public class ConsultaController {
     public ResponseEntity<CancelamentoResponseDTO> cancelarConsulta(@Valid @RequestBody CancelamentoRequestDTO request) {
         CancelamentoResponseDTO resposta = consultaService.cancelarConsulta(request);
         return ResponseEntity.status(HttpStatus.OK).body(resposta);
+    }
+
+    @PostMapping("/cadastrar")
+    public ResponseEntity<CadastroConsultaResponseDTO> cadastrarConsulta(
+            @Valid @RequestBody CadastroConsultaRequestDTO request) {
+        CadastroConsultaResponseDTO resposta = consultaService.cadastrarConsulta(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(resposta);
     }
 
 }

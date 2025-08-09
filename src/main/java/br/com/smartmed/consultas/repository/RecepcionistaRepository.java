@@ -35,4 +35,6 @@ public interface RecepcionistaRepository extends JpaRepository<RecepcionistaMode
             @Param("dataInicio") LocalDate dataInicio,
             @Param("dataFim") LocalDate dataFim,
             Pageable pageable);
+
+    Optional<RecepcionistaModel> findByIdAndAtivoTrue(Integer id);
 }
