@@ -4,6 +4,9 @@ import br.com.smartmed.consultas.model.ConsultaModel;
 import br.com.smartmed.consultas.rest.dto.EspecialidadeAtendimentosDTO;
 import br.com.smartmed.consultas.rest.dto.FaturamentoPorItemDTO;
 import br.com.smartmed.consultas.rest.dto.HistoricoConsultaResponseDTO;
+import br.com.smartmed.consultas.rest.dto.RankingMedicosAtendimentosResponseDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -84,6 +87,19 @@ public interface ConsultaRepository extends JpaRepository<ConsultaModel, Integer
     List<EspecialidadeAtendimentosDTO> findEspecialidadesMaisAtendidas(
             @Param("dataInicio") LocalDateTime dataInicio,
             @Param("dataFim") LocalDateTime dataFim);
+
+
+    @Query(value = "SELECT NEW br.com.smartmed.consultas.rest.dto.RankingMedicosAtendimentosResponseDTO(m.nome, COUNT(c.id)) " +
+            "FROM ConsultaModel c " +
+            "JOIN MedicoModel m ON c.medicoID = m.id " +
+            "WHERE c.status = 'REALIZADA' AND c.dataHoraConsulta BETWEEN :dataInicio AND :dataFim " +
+            "GROUP BY m.nome " +
+            "ORDER BY COUNT(c.id) DESC",
+            countQuery = "SELECT COUNT(DISTINCT m.nome) FROM ConsultaModel c JOIN MedicoModel m ON c.medicoID = m.id WHERE c.status = 'REALIZADA' AND c.dataHoraConsulta BETWEEN :dataInicio AND :dataFim")
+    Page<RankingMedicosAtendimentosResponseDTO> findRankingMedicos(
+            @Param("dataInicio") LocalDateTime dataInicio,
+            @Param("dataFim") LocalDateTime dataFim,
+            Pageable pageable);
 
 }
 

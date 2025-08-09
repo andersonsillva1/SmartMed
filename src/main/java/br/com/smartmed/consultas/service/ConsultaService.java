@@ -13,6 +13,9 @@ import br.com.smartmed.consultas.model.ConvenioModel;
 import br.com.smartmed.consultas.repository.PacienteRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -375,4 +378,44 @@ public class ConsultaService {
 
     }
 
+    @Transactional(readOnly = true)
+    public PageResponseDTO<RankingMedicosAtendimentosResponseDTO> gerarRankingMedicos(RankingMedicosRequestDTO request) {
+
+        // Cria um objeto LocalDate que representa o primeiro dia do mês e do ano que vieram na requisição.
+        // Exemplo: Se a requisição tiver mes=8 e ano=2025, esta linha criará a data 2025-08-01.
+        LocalDate dataInicioMes = LocalDate.of(request.getAno(), request.getMes(), 1);
+
+        //A partir da dataInicioMes que acabamos de criar, esta linha encontra o último dia daquele mês.
+        //dataInicioMes.lengthOfMonth() retorna o número de dias no mês (ex: 31 para agosto).
+        //withDayOfMonth() define o dia da data para o último dia do mês.
+        //Exemplo: Para agosto de 2025, esta linha criaria a data 2025-08-31.
+        LocalDate dataFimMes = dataInicioMes.withDayOfMonth(dataInicioMes.lengthOfMonth());
+
+        //Converte a LocalDate dataInicioMes para um LocalDateTime, definindo a hora para o início do dia (00:00:00).
+        //Exemplo: 2025-08-01T00:00:00. LocalDateTime fimDoPeriodo = dataFimMes.atTime(LocalTime.MAX);:
+        //Converte a LocalDate dataFimMes para um LocalDateTime, definindo a hora para o final do dia (23:59:59.999999999).
+        //Isso é importante para garantir que todas as consultas do último dia do mês sejam incluídas no relatório.
+        LocalDateTime inicioDoPeriodo = dataInicioMes.atStartOfDay();
+        LocalDateTime fimDoPeriodo = dataFimMes.atTime(LocalTime.MAX);
+
+        //comentarios copiado da IA, não consegui desenvolver uma logica para esse caso sozinho.
+        // eu entendi o que estava sendo feito, então deixei.
+        // segundo ele, seria a forma mais simples para esse caso de uso.
+
+
+        // Cria o objeto de paginação
+        Pageable pageable = PageRequest.of(request.getPagina(), request.getTamanhoPagina());
+
+        // Busca o ranking paginado no repositório
+        Page<RankingMedicosAtendimentosResponseDTO> rankingPage = consultaRepository.findRankingMedicos(inicioDoPeriodo, fimDoPeriodo, pageable);
+
+        // Retorna um PageResponseDTO com o conteúdo e os metadados de paginação
+        return new PageResponseDTO<>(
+                rankingPage.getContent(),
+                rankingPage.getTotalPages(),
+                rankingPage.getTotalElements(),
+                rankingPage.getNumber(),
+                rankingPage.getSize()
+        );
+    }
 }
