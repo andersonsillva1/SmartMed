@@ -59,11 +59,11 @@ public class ConsultaController {
         return ResponseEntity.status(HttpStatus.OK).body(resposta);
     }
 
-//    @PostMapping("/cadastrar")
-//    public ResponseEntity<CadastroConsultaResponseDTO> cadastrarConsulta(
-//            @Valid @RequestBody CadastroConsultaRequestDTO request) {
-//        CadastroConsultaResponseDTO resposta = consultaService.cadastrarConsulta(request);
-//        return ResponseEntity.status(HttpStatus.CREATED).body(resposta);
-//    } não implementado o service.
+    @PostMapping("/cadastrar")
+    public ResponseEntity<CadastroConsultaResponseDTO> cadastrarConsulta(
+            @Valid @RequestBody CadastroConsultaRequestDTO request) {
+        CadastroConsultaResponseDTO resposta = consultaService.cadastrarConsulta(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(resposta);
+    }
 
 }

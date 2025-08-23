@@ -46,10 +46,24 @@ public interface ConsultaRepository extends JpaRepository<ConsultaModel, Integer
     Double findTotalFaturamento(@Param("dataInicio") LocalDateTime dataInicio,
                                 @Param("dataFim") LocalDateTime dataFim);
 
+
+    // Em ConsultaRepository.java
+
+    @Query("""
+    SELECT c FROM ConsultaModel c 
+    WHERE c.medicoID = :medicoId
+      AND c.status <> 'CANCELADA'
+      AND c.dataHoraConsulta < :fimPeriodo 
+    ORDER BY c.dataHoraConsulta DESC
+""")
+    List<ConsultaModel> findConsultasQueIniciamAntesDoFim(
+            @Param("medicoId") Integer medicoId,
+            @Param("fimPeriodo") LocalDateTime fimPeriodo
+    );
+
     @Query("SELECT c FROM ConsultaModel c WHERE c.medicoID = :medicoId " +
-            "AND ((c.dataHoraConsulta BETWEEN :inicioPeriodo AND :fimPeriodo) " +
-            "OR (FUNCTION('ADD_MINUTES', c.dataHoraConsulta, 30) BETWEEN :inicioPeriodo AND :fimPeriodo)) " +
-            "ORDER BY c.dataHoraConsulta ASC")
+            "AND c.dataHoraConsulta < :fimPeriodo " +
+            "AND FUNCTION('DATE_ADD', c.dataHoraConsulta, 30, 'MINUTE') > :inicioPeriodo")
     List<ConsultaModel> findConsultasByMedicoAndPeriodo(
             @Param("medicoId") Integer medicoId,
             @Param("inicioPeriodo") LocalDateTime inicioPeriodo,

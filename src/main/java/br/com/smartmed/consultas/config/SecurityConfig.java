@@ -19,19 +19,17 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        // ESTE É O NOVO BEAN QUE RESOLVE O SEU PROBLEMA
         return http
-                // 1. Desabilita o CSRF. Essencial para que APIs REST funcionem com Postman.
-                // CSRF é um tipo de proteção para aplicações web tradicionais, não para APIs.
                 .csrf(AbstractHttpConfigurer::disable)
-
-                // 2. Define as regras de autorização para as requisições.
                 .authorizeHttpRequests(auth -> auth
-                        // 3. Esta é a linha MÁGICA: permite TODAS as requisições (anyRequest)
-                        // sem precisar de autenticação (permitAll).
+                        .requestMatchers("/h2/**").permitAll()
                         .anyRequest().permitAll()
                 )
-
+                // Aqui é a forma correta nas versões novas
+                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .build();
     }
+
+
+
 }

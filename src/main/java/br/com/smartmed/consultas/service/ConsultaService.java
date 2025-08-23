@@ -420,5 +420,75 @@ public class ConsultaService {
                 .orElseThrow(() -> new BusinessRuleException("Recepcionista com ID " + recepcionistaId + " não pode cadastrar consultas. Verifique se o recepcionista existe e está ativo."));
     }
 
-    //Cadastrar Consulta não implementado.
+    @Transactional
+    public CadastroConsultaResponseDTO cadastrarConsulta(CadastroConsultaRequestDTO request) {
+        // 1. REGRA PRINCIPAL: Validação de Acesso do Recepcionista
+        // Usamos o método que já existe no seu repository!
+        recepcionistaRepository.findByIdAndAtivoTrue(request.getRecepcionistaID())
+                .orElseThrow(() -> new BusinessRuleException(
+                        "Recepcionista com ID " + request.getRecepcionistaID() + " não tem permissão para agendar. Verifique se o ID existe e se o recepcionista está ativo."
+                ));
+
+        // 2. Validações de existência das outras entidades (boa prática)
+        PacienteModel paciente = pacienteRepository.findById(request.getPacienteID())
+                .orElseThrow(() -> new ObjectNotFoundException("Paciente com ID " + request.getPacienteID() + " não encontrado."));
+
+        MedicoModel medico = medicoRepository.findById(request.getMedicoID())
+                .orElseThrow(() -> new ObjectNotFoundException("Médico com ID " + request.getMedicoID() + " não encontrado."));
+
+        formaPagamentoRepository.findById(request.getFormaPagamentoID())
+                .orElseThrow(() -> new ObjectNotFoundException("Forma de Pagamento com ID " + request.getFormaPagamentoID() + " não encontrada."));
+
+        // 3. Checagem de Conflito de Agenda do Médico
+        // Em ConsultaService.java, dentro do método cadastrarConsulta
+
+// 3. Checagem de Conflito de Agenda do Médico
+        LocalDateTime inicioNovaConsulta = request.getDataHora();
+        LocalDateTime fimNovaConsulta = inicioNovaConsulta.plusMinutes(request.getDuracaoMinutes());
+
+// Buscamos todas as consultas do médico que começam ANTES do fim da nossa nova consulta
+        List<ConsultaModel> consultasCandidatas = consultaRepository.findConsultasQueIniciamAntesDoFim(
+                medico.getId(),
+                fimNovaConsulta
+        );
+
+// Agora, em Java, verificamos se alguma delas termina DEPOIS do início da nossa nova consulta
+        for (ConsultaModel consultaExistente : consultasCandidatas) {
+            // Assumindo que a duração padrão de uma consulta existente é 30 minutos
+            LocalDateTime fimConsultaExistente = consultaExistente.getDataHoraConsulta().plusMinutes(30);
+
+            // Esta é a checagem clássica de sobreposição: Início1 < Fim2 E Início2 < Fim1
+            if (fimConsultaExistente.isAfter(inicioNovaConsulta)) {
+                // Se entrou aqui, significa que há um conflito.
+                throw new BusinessRuleException("Horário indisponível. O médico já possui uma consulta neste período.");
+            }
+        }
+
+// Se o loop terminar sem lançar a exceção, o horário está livre!
+// ... o resto do código para salvar a consulta continua aqui
+
+        // 4. Se todas as validações passaram, criamos e salvamos a consulta
+        ConsultaModel novaConsulta = new ConsultaModel();
+        novaConsulta.setDataHoraConsulta(request.getDataHora());
+        novaConsulta.setPacienteID(paciente.getId());
+        novaConsulta.setMedicoID(medico.getId());
+        novaConsulta.setRecepcionistaID(request.getRecepcionistaID());
+        novaConsulta.setFormaPagamentoID(request.getFormaPagamentoID());
+
+        // O ID do convênio pode ser nulo, então tratamos esse caso
+        if (request.getConvenioID() != null) {
+            convenioRepository.findById(request.getConvenioID())
+                    .orElseThrow(() -> new ObjectNotFoundException("Convênio com ID " + request.getConvenioID() + " não encontrado."));
+            novaConsulta.setConvenioID(request.getConvenioID());
+        }
+
+        // Regra: "Consulta deve ser cadastrada com status AGENDADA."
+        novaConsulta.setStatus("AGENDADA");
+        novaConsulta.setValor((double) medico.getValorConsultaReferencia()); // Usando o valor de referência do médico
+
+        consultaRepository.save(novaConsulta);
+
+        // 5. Retornamos a resposta de sucesso
+        return new CadastroConsultaResponseDTO("Consulta agendada com sucesso", "AGENDADA");
+    }
 }

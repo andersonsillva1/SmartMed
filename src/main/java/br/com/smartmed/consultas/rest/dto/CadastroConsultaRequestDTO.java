@@ -29,4 +29,13 @@ public class CadastroConsultaRequestDTO {
 
     @NotNull(message = "O ID do recepcionista é obrigatório.")
     private Integer recepcionistaID;
+    private long duracaoMinutes;
+
+    public long getDuracaoMinutes() {
+        return duracaoMinutes;
+    }
+
+    public void setDuracaoMinutes(long duracaoMinutes) {
+        this.duracaoMinutes = duracaoMinutes;
+    }
 }
